@@ -7,6 +7,8 @@ const WIN_BOTTOM = 0; const WIN_TOP = 1;  // default top and bottom y coords in 
 const INPUT_TRIANGLES_URL = "https://raw.githubusercontent.com/NCSUCGClassPrivate/exercise5/async/triangles.json"; // triangles file loc
 const INPUT_ELLIPSOIDS_URL = "https://raw.githubusercontent.com/NCSUCGClassPrivate/exercise5/async/ellipsoids.json"; // ellipsoids file loc
 var Eye = new vec4.fromValues(0.5,0.5,-0.5,1.0); // default eye position in world space
+const SET1_CX = 0.25
+const SET1_CY = 0.25
 
 /* input globals */
 var inputTriangles; // the triangles read in from json
@@ -176,23 +178,23 @@ function setupShaders() {
     } // end catch
 } // end setup shaders
 
+function spin( center, angle ) {
+    var m = mat4.create();
+    mat4.fromTranslation(m, vec3.negate(vec3.create(), center));
+    mat4.multiply(m, mat4.fromRotation(mat4.create(), angle, vec3.fromValues(0,0,1)), m); 
+    mat4.multiply(m, mat4.fromTranslation(mat4.create(), center), m); 
+    return m;
+}
+
 // render the loaded model
-function renderTriangles() {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
-    
-    // define the modeling matrix for the first set 
-    inputTriangles[0].mMatrix = mat4.create(); // modeling mat for tri set
-    var setCenter = vec3.fromValues(.25,.75,0);  // center coords of tri set 
-    mat4.fromTranslation(inputTriangles[0].mMatrix,vec3.negate(vec3.create(),setCenter)); // translate to origin
-    mat4.multiply(inputTriangles[0].mMatrix,
-                  mat4.fromRotation(mat4.create(),Math.PI/2,vec3.fromValues(0,0,1)),
-                  inputTriangles[0].mMatrix); // rotate 90 degs
-    mat4.multiply(inputTriangles[0].mMatrix,
-                  mat4.fromTranslation(mat4.create(),setCenter),
-                  inputTriangles[0].mMatrix); // move back to center
-        
-    // define the modeling matrix for the second set
-    inputTriangles[1].mMatrix = mat4.create();
+function renderTriangles( angle ) {
+   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // clear frame/depth buffers
+
+    // first set spins around its center
+    inputTriangles[0].mMatrix = spin(vec3.fromValues(.25,.75,0), angle);
+
+    // second set spins the opposite way around its own center
+    inputTriangles[1].mMatrix = spin(vec3.fromValues(SET1_CX, SET1_CY, 0), -angle);
     
     for (var whichTriSet=0; whichTriSet<numTriangleSets; whichTriSet++) { 
         
@@ -209,7 +211,10 @@ function renderTriangles() {
     } // end for each tri set
 } // end render triangles
 
-
+function animate(timeMs) {
+    renderTriangles( timeMs * 0.001 ); 
+    requestAnimationFrame( animate ); 
+}
 /* MAIN -- HERE is where execution begins after window load */
 
 function main() {
@@ -217,6 +222,9 @@ function main() {
   setupWebGL(); // set up the webGL environment
   loadTriangles(); // load in the triangles from tri file
   setupShaders(); // setup the webGL shaders
-  renderTriangles(); // draw the triangles using webGL
+  
+  //recurisve
+  requestAnimationFrame( animate );
+ 
   
 } // end main
